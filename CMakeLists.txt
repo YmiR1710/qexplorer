@@ -26,5 +26,5 @@ add_executable(qexplorer
   archiver.cpp
   archiver.h
 )
-
+set_target_properties(qexplorer PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 target_link_libraries(qexplorer PRIVATE Qt5::Widgets ${LibArchive_LIBRARIES})

@@ -32,6 +32,8 @@ MainWindow::MainWindow(QWidget *parent)
     QModelIndex idx = model->index(model->rootPath());
     ui->listView_1->setRootIndex(idx);
     ui->listView_2->setRootIndex(idx);
+    ui->search_1->setVisible(false);
+    ui->search_2->setVisible(false);
     connect(ui->listView_1, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(on_listView_1_doubleClicked(QModelIndex)));
     connect(ui->listView_2, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(on_listView_1_doubleClicked(QModelIndex)));
     connect(ui->listView_1, SIGNAL(clicked(QModelIndex)), this, SLOT(click(QModelIndex)));
@@ -40,10 +42,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->listView_1, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(customMenuRequested(QPoint)));
     connect(ui->lineEdit_1, SIGNAL(returnPressed()), SLOT(lineEditEnter()));
     connect(ui->lineEdit_2, SIGNAL(returnPressed()), SLOT(lineEditEnter()));
+    connect(ui->search_button_1, SIGNAL (released()),this, SLOT (show_hide_search_1()));
+    connect(ui->search_button_2, SIGNAL (released()),this, SLOT (show_hide_search_2()));
+    connect(ui->search_1, SIGNAL(returnPressed()), SLOT(searchEnter()));
+    connect(ui->search_2, SIGNAL(returnPressed()), SLOT(searchEnter()));
     ui->listView_1->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->listView_2->setContextMenuPolicy(Qt::CustomContextMenu);
     new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_C), this, SLOT(copy_file()));
     new QShortcut(QKeySequence(Qt::Key_Delete), this, SLOT(delete_file()));
+    new QShortcut(QKeySequence(Qt::Key_Escape), this, SLOT(close_search()));
 }
 
 MainWindow::~MainWindow()
@@ -92,6 +99,27 @@ void MainWindow::on_listView_1_doubleClicked(const QModelIndex &index)
         listView->setRootIndex(index);
     }
     this->setCursor(QCursor(Qt::ArrowCursor));
+}
+
+void MainWindow::close_search(){
+    ui->search_1->setVisible(false);
+    ui->search_2->setVisible(false);
+}
+
+void MainWindow::show_hide_search_1(){
+    if(ui->search_1->isVisible()){
+        ui->search_1->setVisible(false);
+    } else{
+        ui->search_1->setVisible(true);
+    }
+}
+
+void MainWindow::show_hide_search_2(){
+    if(ui->search_2->isVisible()){
+        ui->search_2->setVisible(false);
+    } else{
+        ui->search_2->setVisible(true);
+    }
 }
 
 void MainWindow::delete_file(){
@@ -455,6 +483,12 @@ void MainWindow::lineEditEnter(){
             ui->listView_2->setRootIndex(idx);
         }
     }
+}
+
+void MainWindow::searchEnter(){
+    QLineEdit* line = (QLineEdit*)sender();
+    QString item_name = line->text();
+
 }
 
 void MainWindow::unarhive(){
