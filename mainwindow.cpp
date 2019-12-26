@@ -15,7 +15,7 @@ QString mPath = "/";
 
 QModelIndex chosenFile;
 QModelIndex copiedFile;
-
+bool to_cut = false;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -234,6 +234,11 @@ void MainWindow::copy_file(){
     copiedFile = chosenFile;
 }
 
+void MainWindow::cut_file(){
+    copiedFile = chosenFile;
+    to_cut = true;
+}
+
 void MainWindow::paste_file(){
     this->setCursor(QCursor(Qt::WaitCursor));
     QFileInfo copy_info = model->fileInfo(copiedFile);
@@ -273,7 +278,90 @@ void MainWindow::paste_file(){
             }
         }
     }
+    if(to_cut){
+        if(model->fileInfo(copiedFile).isDir()){
+            QDir dir(model->fileInfo(copiedFile).absoluteFilePath());
+            this->setCursor(QCursor(Qt::WaitCursor));
+            dir.removeRecursively();
+            this->setCursor(QCursor(Qt::ArrowCursor));
+        }else{
+            QFile file(model->fileInfo(copiedFile).absoluteFilePath());
+            this->setCursor(QCursor(Qt::WaitCursor));
+            file.remove();
+            this->setCursor(QCursor(Qt::ArrowCursor));
+        }
+    }
+    to_cut = false;
     this->setCursor(QCursor(Qt::ArrowCursor));
+}
+
+void MainWindow::create_file(){
+    int counter = 1;
+    bool result;
+    QString text = QInputDialog::getText(this, tr(""),
+                                         tr("New file:"), QLineEdit::Normal,
+                                         "", &result);
+    if(result){
+        QString path = model->fileInfo(chosenFile).absolutePath();
+        path.append("/");
+        path.append(text);
+        QFile newFile(path);
+        if(newFile.exists()){
+            while(true){
+                path = model->fileInfo(chosenFile).absolutePath();
+                path.append("/");
+                QStringList text_list = text.split('.');
+                text_list[0].append("(");
+                text_list[0].append(QString::number(counter));
+                text_list[0].append(")");
+                path.append(text_list.join("."));
+                QFile newFile(path);
+                if(!newFile.exists()){
+                    newFile.open(QFile::WriteOnly);
+                    break;
+                }
+                counter++;
+            }
+        }
+        else{
+            newFile.open(QFile::WriteOnly);
+        }
+        newFile.close();
+    }
+}
+
+void MainWindow::create_folder(){
+    int counter = 1;
+    bool result;
+    QString text = QInputDialog::getText(this, tr(""),
+                                         tr("New folder:"), QLineEdit::Normal,
+                                         "", &result);
+    if(result){
+        QString path = model->fileInfo(chosenFile).absolutePath();
+        path.append("/");
+        path.append(text);
+        QDir newFolder(path);
+        if(newFolder.exists()){
+            while(true){
+                path = model->fileInfo(chosenFile).absolutePath();
+                path.append("/");
+                QStringList text_list = text.split('.');
+                text_list[0].append("(");
+                text_list[0].append(QString::number(counter));
+                text_list[0].append(")");
+                path.append(text_list.join("."));
+                QDir newFolder(path);
+                if(!newFolder.exists()){
+                    newFolder.mkpath(".");
+                    break;
+                }
+                counter++;
+            }
+        }
+        else{
+            newFolder.mkpath(".");
+        }
+    }
 }
 
 void MainWindow::customMenuRequested(const QPoint &pos){
@@ -282,34 +370,39 @@ void MainWindow::customMenuRequested(const QPoint &pos){
     if(!(model->fileInfo(index).completeBaseName() == "." || model->fileInfo(index).completeBaseName() == "")){
         chosenFile = index;
         QFileInfo fileInfo = model->fileInfo(index);            
-
         QMenu *menu=new QMenu(this);
         menu->setObjectName("menu");
-
         QAction *open_action = new QAction("Open", this);
         menu->addAction(open_action);
+        QMenu *create_menu = menu->addMenu("Create");
+        QAction *create_folder_action = new QAction("Folder", this);
+        QAction *create_file_action = new QAction("File", this);
+        create_menu->addAction(create_folder_action);
+        create_menu->addAction(create_file_action);
         QAction *copy_action = new QAction("Copy", this);
         menu->addAction(copy_action);
+        QAction *cut_action = new QAction("Cut", this);
+        menu->addAction(cut_action);
         QAction *paste_action = new QAction("Paste", this);
 //        paste_action->setDisabled(true);
         menu->addAction(paste_action);
         paste_action->setObjectName("paste_action");
+        if (is_archive(fileInfo.suffix())){
+            QAction *unarchive_action = new QAction("Unarchive", this);
+            menu->addAction(unarchive_action);
+            connect(unarchive_action, SIGNAL(triggered()), this, SLOT(unarhive()));
+        }
         QAction *delete_action = new QAction("Delete", this);
         menu->addAction(delete_action);
         QAction *rename_action = new QAction("Rename", this);
         menu->addAction(rename_action);
         QAction *properties_action = new QAction("Properties", this);
         menu->addAction(properties_action);
-
-        if (is_archive(fileInfo.suffix())){
-            qDebug("file is archive");
-            QAction *unarchive_action = new QAction("Unarchive", this);
-            menu->addAction(unarchive_action);
-            connect(unarchive_action, SIGNAL(triggered()), this, SLOT(unarhive()));
-        }
-
         connect(open_action, SIGNAL(triggered()), this, SLOT(open_file()));
+        connect(create_file_action, SIGNAL(triggered()), this, SLOT(create_file()));
+        connect(create_folder_action, SIGNAL(triggered()), this, SLOT(create_folder()));
         connect(copy_action, SIGNAL(triggered()), this, SLOT(copy_file()));
+        connect(cut_action, SIGNAL(triggered()), this, SLOT(cut_file()));
         connect(paste_action, SIGNAL(triggered()), this, SLOT(paste_file()));
         connect(delete_action, SIGNAL(triggered()), this, SLOT(delete_file()));
         connect(rename_action, SIGNAL(triggered()), this, SLOT(rename_file()));
@@ -372,8 +465,6 @@ void MainWindow::unarhive(){
     }
 
     try {
-//        qDebug(fileInfo.absoluteFilePath().toStdString().c_str());
-//        qDebug((fileInfo.absolutePath()+"/").toStdString().c_str());
         extract(fileInfo.absoluteFilePath().toStdString().c_str(), fileInfo.absolutePath()+"/");
     } catch (std::exception) {
         qDebug("exception!");

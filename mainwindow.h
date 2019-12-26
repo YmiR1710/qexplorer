@@ -35,6 +35,9 @@ private slots:
     void paste_file();
     void unarhive();
     void open_file();
+    void cut_file();
+    void create_file();
+    void create_folder();
 
 
 private:
