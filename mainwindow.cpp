@@ -273,10 +273,12 @@ void MainWindow::paste_file(){
             QString src_path = copy_info.absoluteFilePath();
             new_path.append("/");
             new_path.append(copy_info.baseName());
+            if(!copy_info.completeSuffix().isEmpty()){
+                new_path.append(".");
+            }
             new_path.append(copy_info.completeSuffix());
             copyPath(src_path, new_path);
         }
-
     }else{
         QFile file_to_copy(copy_info.absoluteFilePath());
         if(file_to_copy.exists()){
