@@ -101,11 +101,6 @@ void MainWindow::on_listView_1_doubleClicked(const QModelIndex &index)
     this->setCursor(QCursor(Qt::ArrowCursor));
 }
 
-void MainWindow::close_search(){
-    ui->search_1->setVisible(false);
-    ui->search_2->setVisible(false);
-}
-
 void MainWindow::show_hide_search_1(){
     if(ui->search_1->isVisible()){
         ui->search_1->setVisible(false);
@@ -488,7 +483,33 @@ void MainWindow::lineEditEnter(){
 void MainWindow::searchEnter(){
     QLineEdit* line = (QLineEdit*)sender();
     QString item_name = line->text();
+    QStringList filters;
+    QString request = "*";
+    request.append(item_name);
+    request.append("*");
+    filters << request;
+    filters << ".";
+    filters << "..";
+//    QFileSystemModel *filtered_model = new QFileSystemModel(this);
+//    filtered_model->setRootPath(mPath);
+//    filtered_model->setNameFilters(filters);
+//    filtered_model->setNameFilterDisables(false);
+    model->setNameFilters(filters);
+    model->setNameFilterDisables(false);
+    if(line == ui->search_1){
+//        ui->listView_1->setModel(filtered_model);
+        ui->listView_1->setRootIndex(model->index(ui->lineEdit_1->text()));
+    } else if(line == ui->search_2){
+//        ui->listView_2->setModel(filtered_model);
+        ui->listView_2->setRootIndex(model->index(ui->lineEdit_2->text()));
+    }
+}
 
+void MainWindow::close_search(){
+    ui->search_1->setVisible(false);
+    ui->search_2->setVisible(false);
+    QStringList filters;
+    model->setNameFilters(filters);
 }
 
 void MainWindow::unarhive(){
