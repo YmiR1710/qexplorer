@@ -193,11 +193,12 @@ void MainWindow::rename_file(){
 }
 
 void MainWindow::get_properties(){
-    this->setCursor(QCursor(Qt::WaitCursor));
     QFileInfo info = model->fileInfo(chosenFile);
     QMessageBox properties_window(this);
     properties_window.setWindowTitle("Properties");
     properties_window.setStandardButtons(QMessageBox::Close);
+    properties_window.setCursor(QCursor(Qt::WaitCursor));
+    properties_window.exec();
     QString properties_text;
     QStringList properties_list = {"Name: ", "Type: ", "Size: ", "Parent folder: ",
                                    "Group: ", "Owner: ", "Created: ", "Last modified: "};
@@ -249,8 +250,7 @@ void MainWindow::get_properties(){
     properties_text.append(properties_list[7]);
     properties_text.append(info.created().toString(Qt::SystemLocaleLongDate));
     properties_window.setText(properties_text);
-    this->setCursor(QCursor(Qt::ArrowCursor));
-    properties_window.exec();
+    properties_window.setCursor(QCursor(Qt::ArrowCursor));
 }
 
 void MainWindow::copy_file(){
