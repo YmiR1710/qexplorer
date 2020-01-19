@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 #include "archiver.h"
 
+
 #if defined(_WIN32)
 QString mPath = "C:\";
 #endif
@@ -15,6 +16,8 @@ QString mPath = "/";
 
 QModelIndex chosenFile;
 QModelIndex copiedFile;
+QList<QModelIndex> chosenFiles;
+QList<QModelIndex> copiedFiles;
 bool to_cut = false;
 
 MainWindow::MainWindow(QWidget *parent)
@@ -48,6 +51,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->search_2, SIGNAL(returnPressed()), SLOT(searchEnter()));
     ui->listView_1->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->listView_2->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->listView_1->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    ui->listView_2->setSelectionMode(QAbstractItemView::ExtendedSelection);
     new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_C), this, SLOT(copy_file()));
     new QShortcut(QKeySequence(Qt::Key_Delete), this, SLOT(delete_file()));
     new QShortcut(QKeySequence(Qt::Key_Escape), this, SLOT(close_search()));
@@ -67,6 +72,11 @@ void MainWindow::on_listView_1_doubleClicked(const QModelIndex &index)
     this->setCursor(QCursor(Qt::WaitCursor));
     QListView* listView = (QListView*)sender();
     QFileInfo fileInfo = model->fileInfo(index);
+    if (fileInfo.isFile()) {
+        QDesktopServices::openUrl(QUrl(fileInfo.absoluteFilePath().prepend("file:///")));
+        this->setCursor(QCursor(Qt::ArrowCursor));
+        return;
+    }
     if(listView == ui->listView_1){
         ui->lineEdit_1->setText(fileInfo.absoluteFilePath());
     }else{
@@ -78,24 +88,8 @@ void MainWindow::on_listView_1_doubleClicked(const QModelIndex &index)
         listView->setRootIndex(model->index(dir.absolutePath()));
     }else if (fileInfo.fileName() == "."){
         listView->setRootIndex(model->index(""));
-    } else if (fileInfo.isFile()) {
-        QString command = "";
-        #if defined(__APPLE__)
-            command.append("open ");
-            command.append(fileInfo.absoluteFilePath());
-            qDebug(command.toStdString().c_str());
-            system(command.toStdString().c_str());
-        #endif
-    } else if (fileInfo.suffix() == "app"){
-        QString command = "";
-        #if defined(__APPLE__)
-            command.append("open ");
-            command.append(fileInfo.absoluteFilePath().replace(" ", "\\ "));
-            qDebug(command.toStdString().c_str());
-            system(command.toStdString().c_str());
-        #endif
-
-    } else if (fileInfo.isDir()){
+    }
+    else if (fileInfo.isDir()){
         listView->setRootIndex(index);
     }
     this->setCursor(QCursor(Qt::ArrowCursor));
@@ -118,29 +112,55 @@ void MainWindow::show_hide_search_2(){
 }
 
 void MainWindow::delete_file(){
-    QMessageBox::StandardButton reply;
-    QString question = "Are you sure you want to delete ";
-    question.append(model->fileInfo(chosenFile).baseName());
-    if(!(model->fileInfo(chosenFile).completeSuffix() == "")){
-        question.append(".");
-    }
-    question.append(model->fileInfo(chosenFile).completeSuffix());
-    question.append("?");
-    reply = QMessageBox::question(this, "", question,
-                                  QMessageBox::Yes|QMessageBox::No);
-    if(model->fileInfo(chosenFile).isDir()){
-        QDir dir(model->fileInfo(chosenFile).absoluteFilePath());
-        if (reply == QMessageBox::Yes) {
-            this->setCursor(QCursor(Qt::WaitCursor));
-            dir.removeRecursively();
-            this->setCursor(QCursor(Qt::ArrowCursor));
+    if(chosenFiles.size()>=2){
+        QMessageBox::StandardButton reply;
+        QString question = "Are you sure you want to delete " + QString::number(chosenFiles.size()) +
+                " files?";
+        reply = QMessageBox::question(this, "", question,
+                                      QMessageBox::Yes|QMessageBox::No);
+        for(auto &c_file: chosenFiles){
+            if(model->fileInfo(c_file).isDir()){
+                QDir dir(model->fileInfo(c_file).absoluteFilePath());
+                if (reply == QMessageBox::Yes) {
+                    this->setCursor(QCursor(Qt::WaitCursor));
+                    dir.removeRecursively();
+                    this->setCursor(QCursor(Qt::ArrowCursor));
+                }
+            }else{
+                QFile file(model->fileInfo(c_file).absoluteFilePath());
+                if (reply == QMessageBox::Yes) {
+                    this->setCursor(QCursor(Qt::WaitCursor));
+                    file.remove();
+                    this->setCursor(QCursor(Qt::ArrowCursor));
+                }
+            }
         }
-    }else{
-        QFile file(model->fileInfo(chosenFile).absoluteFilePath());
-        if (reply == QMessageBox::Yes) {
-            this->setCursor(QCursor(Qt::WaitCursor));
-            file.remove();
-            this->setCursor(QCursor(Qt::ArrowCursor));
+    }
+    else{
+        QMessageBox::StandardButton reply;
+        QString question = "Are you sure you want to delete ";
+        question.append(model->fileInfo(chosenFile).baseName());
+        if(!(model->fileInfo(chosenFile).completeSuffix() == "")){
+            question.append(".");
+        }
+        question.append(model->fileInfo(chosenFile).completeSuffix());
+        question.append("?");
+        reply = QMessageBox::question(this, "", question,
+                                      QMessageBox::Yes|QMessageBox::No);
+        if(model->fileInfo(chosenFile).isDir()){
+            QDir dir(model->fileInfo(chosenFile).absoluteFilePath());
+            if (reply == QMessageBox::Yes) {
+                this->setCursor(QCursor(Qt::WaitCursor));
+                dir.removeRecursively();
+                this->setCursor(QCursor(Qt::ArrowCursor));
+            }
+        }else{
+            QFile file(model->fileInfo(chosenFile).absoluteFilePath());
+            if (reply == QMessageBox::Yes) {
+                this->setCursor(QCursor(Qt::WaitCursor));
+                file.remove();
+                this->setCursor(QCursor(Qt::ArrowCursor));
+            }
         }
     }
 }
@@ -392,47 +412,82 @@ void MainWindow::create_folder(){
 void MainWindow::customMenuRequested(const QPoint &pos){
     QListView* listView = (QListView*)sender();
     QModelIndex index=listView->indexAt(pos);
+    QModelIndexList list = listView->selectionModel()->selectedIndexes();
+    chosenFiles.clear();
+    foreach(const QModelIndex &indexx, list){
+        chosenFiles.append(indexx);
+    }
     if(!(model->fileInfo(index).completeBaseName() == "." || model->fileInfo(index).completeBaseName() == "")){
-        chosenFile = index;
-        QFileInfo fileInfo = model->fileInfo(index);            
-        QMenu *menu=new QMenu(this);
-        menu->setObjectName("menu");
-        QAction *open_action = new QAction("Open", this);
-        menu->addAction(open_action);
-        QMenu *create_menu = menu->addMenu("Create");
-        QAction *create_folder_action = new QAction("Folder", this);
-        QAction *create_file_action = new QAction("File", this);
-        create_menu->addAction(create_folder_action);
-        create_menu->addAction(create_file_action);
-        QAction *copy_action = new QAction("Copy", this);
-        menu->addAction(copy_action);
-        QAction *cut_action = new QAction("Cut", this);
-        menu->addAction(cut_action);
-        QAction *paste_action = new QAction("Paste", this);
-//        paste_action->setDisabled(true);
-        menu->addAction(paste_action);
-        paste_action->setObjectName("paste_action");
-        if (is_archive(fileInfo.suffix())){
-            QAction *unarchive_action = new QAction("Unarchive", this);
-            menu->addAction(unarchive_action);
-            connect(unarchive_action, SIGNAL(triggered()), this, SLOT(unarhive()));
+        if(chosenFiles.size() >= 2){
+            chosenFile = index;
+            QMenu *menu=new QMenu(this);
+            menu->setObjectName("menu");
+            QMenu *create_menu = menu->addMenu("Create");
+            QAction *create_folder_action = new QAction("Folder", this);
+            QAction *create_file_action = new QAction("File", this);
+            create_menu->addAction(create_folder_action);
+            create_menu->addAction(create_file_action);
+            QAction *copy_action = new QAction("Copy", this);
+            menu->addAction(copy_action);
+            QAction *cut_action = new QAction("Cut", this);
+            menu->addAction(cut_action);
+            QAction *paste_action = new QAction("Paste", this);
+            menu->addAction(paste_action);
+            paste_action->setObjectName("paste_action");
+            QAction *delete_action = new QAction("Delete", this);
+            menu->addAction(delete_action);
+            connect(create_file_action, SIGNAL(triggered()), this, SLOT(create_file()));
+            connect(create_folder_action, SIGNAL(triggered()), this, SLOT(create_folder()));
+            connect(copy_action, SIGNAL(triggered()), this, SLOT(copy_file()));
+            connect(cut_action, SIGNAL(triggered()), this, SLOT(cut_file()));
+            connect(paste_action, SIGNAL(triggered()), this, SLOT(paste_file()));
+            connect(delete_action, SIGNAL(triggered()), this, SLOT(delete_file()));
+            menu->popup(listView->viewport()->mapToGlobal(pos));
         }
-        QAction *delete_action = new QAction("Delete", this);
-        menu->addAction(delete_action);
-        QAction *rename_action = new QAction("Rename", this);
-        menu->addAction(rename_action);
-        QAction *properties_action = new QAction("Properties", this);
-        menu->addAction(properties_action);
-        connect(open_action, SIGNAL(triggered()), this, SLOT(open_file()));
-        connect(create_file_action, SIGNAL(triggered()), this, SLOT(create_file()));
-        connect(create_folder_action, SIGNAL(triggered()), this, SLOT(create_folder()));
-        connect(copy_action, SIGNAL(triggered()), this, SLOT(copy_file()));
-        connect(cut_action, SIGNAL(triggered()), this, SLOT(cut_file()));
-        connect(paste_action, SIGNAL(triggered()), this, SLOT(paste_file()));
-        connect(delete_action, SIGNAL(triggered()), this, SLOT(delete_file()));
-        connect(rename_action, SIGNAL(triggered()), this, SLOT(rename_file()));
-        connect(properties_action, SIGNAL(triggered()), this, SLOT(get_properties()));        
-        menu->popup(listView->viewport()->mapToGlobal(pos));
+        else{
+            chosenFile = index;
+            QFileInfo fileInfo = model->fileInfo(index);
+            QMenu *menu=new QMenu(this);
+            menu->setObjectName("menu");
+            if(fileInfo.isFile()){
+                QAction *open_action = new QAction("Open", this);
+                menu->addAction(open_action);
+                connect(open_action, SIGNAL(triggered()), this, SLOT(open_file()));
+            }
+            QMenu *create_menu = menu->addMenu("Create");
+            QAction *create_folder_action = new QAction("Folder", this);
+            QAction *create_file_action = new QAction("File", this);
+            create_menu->addAction(create_folder_action);
+            create_menu->addAction(create_file_action);
+            QAction *copy_action = new QAction("Copy", this);
+            menu->addAction(copy_action);
+            QAction *cut_action = new QAction("Cut", this);
+            menu->addAction(cut_action);
+            QAction *paste_action = new QAction("Paste", this);
+    //        paste_action->setDisabled(true);
+            menu->addAction(paste_action);
+            paste_action->setObjectName("paste_action");
+            if (is_archive(fileInfo.suffix())){
+                QAction *unarchive_action = new QAction("Unarchive", this);
+                menu->addAction(unarchive_action);
+                connect(unarchive_action, SIGNAL(triggered()), this, SLOT(unarhive()));
+            }
+            QAction *delete_action = new QAction("Delete", this);
+            menu->addAction(delete_action);
+            QAction *rename_action = new QAction("Rename", this);
+            menu->addAction(rename_action);
+            QAction *properties_action = new QAction("Properties", this);
+            menu->addAction(properties_action);
+            connect(create_file_action, SIGNAL(triggered()), this, SLOT(create_file()));
+            connect(create_folder_action, SIGNAL(triggered()), this, SLOT(create_folder()));
+            connect(copy_action, SIGNAL(triggered()), this, SLOT(copy_file()));
+            connect(cut_action, SIGNAL(triggered()), this, SLOT(cut_file()));
+            connect(paste_action, SIGNAL(triggered()), this, SLOT(paste_file()));
+            connect(delete_action, SIGNAL(triggered()), this, SLOT(delete_file()));
+            connect(rename_action, SIGNAL(triggered()), this, SLOT(rename_file()));
+            connect(properties_action, SIGNAL(triggered()), this, SLOT(get_properties()));
+            menu->popup(listView->viewport()->mapToGlobal(pos));
+        }
     }
 }
 
@@ -531,38 +586,7 @@ void MainWindow::unarhive(){
 
 void MainWindow::open_file(){
     this->setCursor(QCursor(Qt::WaitCursor));
-    QListView* listView = (QListView*)sender();
     QFileInfo fileInfo = model->fileInfo(chosenFile);
-//    if(listView == ui->listView_1){
-//        ui->lineEdit_2->setText(fileInfo.absoluteFilePath());
-//    }else if (listView == ui->listView_2){
-//        ui->lineEdit_1->setText(fileInfo.absoluteFilePath());
-//    }
-    if (fileInfo.fileName() == ".."){
-        QDir dir = fileInfo.dir();
-        dir.cdUp();
-        listView->setRootIndex(model->index(dir.absolutePath()));
-    }else if (fileInfo.fileName() == "."){
-        listView->setRootIndex(model->index(""));
-    }else if (fileInfo.isFile()) {
-        QString command = "";
-        #if defined(__APPLE__)
-            command.append("open ");
-            command.append(fileInfo.absoluteFilePath());
-            qDebug(command.toStdString().c_str());
-            system(command.toStdString().c_str());
-        #endif
-    } else if (fileInfo.suffix() == "app"){
-        QString command = "";
-        #if defined(__APPLE__)
-            command.append("open ");
-            command.append(fileInfo.absoluteFilePath().replace(" ", "\\ "));
-            qDebug(command.toStdString().c_str());
-            system(command.toStdString().c_str());
-        #endif
-
-    } else if (fileInfo.isDir()){
-        listView->setRootIndex(chosenFile);
-    }
+    QDesktopServices::openUrl(QUrl(fileInfo.absoluteFilePath().prepend("file:///")));
     this->setCursor(QCursor(Qt::ArrowCursor));
 }

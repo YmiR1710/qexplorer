@@ -9,6 +9,8 @@
 #include <QInputDialog>
 #include <QDateTime>
 #include <QShortcut>
+#include <QDesktopServices>
+#include <QUrl>
 
 
 QT_BEGIN_NAMESPACE
