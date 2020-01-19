@@ -54,7 +54,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->listView_1->setSelectionMode(QAbstractItemView::ExtendedSelection);
     ui->listView_2->setSelectionMode(QAbstractItemView::ExtendedSelection);
     new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_C), this, SLOT(copy_file()));
-    new QShortcut(QKeySequence(Qt::Key_Delete), this, SLOT(delete_file()));
     new QShortcut(QKeySequence(Qt::Key_Escape), this, SLOT(close_search()));
 }
 
@@ -163,6 +162,7 @@ void MainWindow::delete_file(){
             }
         }
     }
+    chosenFiles.clear();
 }
 
 void MainWindow::rename_file(){
@@ -274,66 +274,68 @@ void MainWindow::get_properties(){
 }
 
 void MainWindow::copy_file(){
-    copiedFile = chosenFile;
+    copiedFiles = chosenFiles;
 }
 
 void MainWindow::cut_file(){
-    copiedFile = chosenFile;
+    copiedFiles = chosenFiles;
     to_cut = true;
 }
 
 void MainWindow::paste_file(){
     this->setCursor(QCursor(Qt::WaitCursor));
-    QFileInfo copy_info = model->fileInfo(copiedFile);
-    QFileInfo chosen_info = model->fileInfo(chosenFile);
-    if(copy_info.isDir()){
-        QDir dir_to_copy(copy_info.absoluteFilePath());
-        if(dir_to_copy.exists()){
-            QString new_path = chosen_info.absolutePath();
-            QString src_path = copy_info.absoluteFilePath();
-            new_path.append("/");
-            new_path.append(copy_info.baseName());
-            if(!copy_info.completeSuffix().isEmpty()){
-                new_path.append(".");
-            }
-            new_path.append(copy_info.completeSuffix());
-            copyPath(src_path, new_path);
-        }
-    }else{
-        QFile file_to_copy(copy_info.absoluteFilePath());
-        if(file_to_copy.exists()){
-            QString new_path = chosen_info.absolutePath();
-            new_path.append("/");
-            new_path.append(copy_info.baseName());
-            new_path.append(".");
-            new_path.append(copy_info.completeSuffix());
-            int counter = 1;
-            while(!file_to_copy.copy(new_path)){
-                new_path = chosen_info.absolutePath();
+    for (auto& c_file: copiedFiles){
+        QFileInfo copy_info = model->fileInfo(c_file);
+        QFileInfo chosen_info = model->fileInfo(chosenFile);
+        if(copy_info.isDir()){
+            QDir dir_to_copy(copy_info.absoluteFilePath());
+            if(dir_to_copy.exists()){
+                QString new_path = chosen_info.absolutePath();
+                QString src_path = copy_info.absoluteFilePath();
                 new_path.append("/");
-                QString text = copy_info.baseName();
-                text.append(".");
-                text.append(copy_info.completeSuffix());
-                QStringList text_list = text.split('.');
-                text_list[0].append("(");
-                text_list[0].append(QString::number(counter));
-                text_list[0].append(")");
-                new_path.append(text_list.join("."));
-                counter++;
+                new_path.append(copy_info.baseName());
+                if(!copy_info.completeSuffix().isEmpty()){
+                    new_path.append(".");
+                }
+                new_path.append(copy_info.completeSuffix());
+                copyPath(src_path, new_path);
+            }
+        }else{
+            QFile file_to_copy(copy_info.absoluteFilePath());
+            if(file_to_copy.exists()){
+                QString new_path = chosen_info.absolutePath();
+                new_path.append("/");
+                new_path.append(copy_info.baseName());
+                new_path.append(".");
+                new_path.append(copy_info.completeSuffix());
+                int counter = 1;
+                while(!file_to_copy.copy(new_path)){
+                    new_path = chosen_info.absolutePath();
+                    new_path.append("/");
+                    QString text = copy_info.baseName();
+                    text.append(".");
+                    text.append(copy_info.completeSuffix());
+                    QStringList text_list = text.split('.');
+                    text_list[0].append("(");
+                    text_list[0].append(QString::number(counter));
+                    text_list[0].append(")");
+                    new_path.append(text_list.join("."));
+                    counter++;
+                }
             }
         }
-    }
-    if(to_cut){
-        if(model->fileInfo(copiedFile).isDir()){
-            QDir dir(model->fileInfo(copiedFile).absoluteFilePath());
-            this->setCursor(QCursor(Qt::WaitCursor));
-            dir.removeRecursively();
-            this->setCursor(QCursor(Qt::ArrowCursor));
-        }else{
-            QFile file(model->fileInfo(copiedFile).absoluteFilePath());
-            this->setCursor(QCursor(Qt::WaitCursor));
-            file.remove();
-            this->setCursor(QCursor(Qt::ArrowCursor));
+        if(to_cut){
+            if(model->fileInfo(c_file).isDir()){
+                QDir dir(model->fileInfo(c_file).absoluteFilePath());
+                this->setCursor(QCursor(Qt::WaitCursor));
+                dir.removeRecursively();
+                this->setCursor(QCursor(Qt::ArrowCursor));
+            }else{
+                QFile file(model->fileInfo(c_file).absoluteFilePath());
+                this->setCursor(QCursor(Qt::WaitCursor));
+                file.remove();
+                this->setCursor(QCursor(Qt::ArrowCursor));
+            }
         }
     }
     to_cut = false;
