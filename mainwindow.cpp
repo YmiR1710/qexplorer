@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include "archiver.h"
+#include "QDebug"
 
 
 #if defined(_WIN32)
@@ -122,14 +123,33 @@ void MainWindow::delete_file(){
                 QDir dir(model->fileInfo(c_file).absoluteFilePath());
                 if (reply == QMessageBox::Yes) {
                     this->setCursor(QCursor(Qt::WaitCursor));
-                    dir.removeRecursively();
+                    QFileInfo f(dir.absolutePath());
+                    QString own = f.owner();
+                    if (f.permission(QFile::WriteUser) && own != "root"){
+                        dir.removeRecursively();
+                    }else{
+                        QMessageBox messageBox;
+                        messageBox.setText("You can`t delete this folder");
+                        messageBox.setFixedSize(500,200);
+                        messageBox.exec();
+                    }
+
                     this->setCursor(QCursor(Qt::ArrowCursor));
                 }
             }else{
                 QFile file(model->fileInfo(c_file).absoluteFilePath());
                 if (reply == QMessageBox::Yes) {
                     this->setCursor(QCursor(Qt::WaitCursor));
-                    file.remove();
+                    QFileInfo f(file);
+                    QString own = f.owner();
+                    if (f.permission(QFile::WriteUser) && own != "root"){
+                        file.remove();
+                    }else{
+                        QMessageBox messageBox;
+                        messageBox.setText("You can`t delete this file");
+                        messageBox.setFixedSize(500,200);
+                        messageBox.exec();
+                    }
                     this->setCursor(QCursor(Qt::ArrowCursor));
                 }
             }
@@ -150,14 +170,32 @@ void MainWindow::delete_file(){
             QDir dir(model->fileInfo(chosenFile).absoluteFilePath());
             if (reply == QMessageBox::Yes) {
                 this->setCursor(QCursor(Qt::WaitCursor));
-                dir.removeRecursively();
+                QFileInfo f(dir.absolutePath());
+                QString own = f.owner();
+                if (f.permission(QFile::WriteUser) && own != "root"){
+                    dir.removeRecursively();
+                }else{
+                    QMessageBox messageBox;
+                    messageBox.setText("You can`t delete this folder");
+                    messageBox.setFixedSize(500,200);
+                    messageBox.exec();
+                }
                 this->setCursor(QCursor(Qt::ArrowCursor));
             }
         }else{
             QFile file(model->fileInfo(chosenFile).absoluteFilePath());
             if (reply == QMessageBox::Yes) {
                 this->setCursor(QCursor(Qt::WaitCursor));
-                file.remove();
+                QFileInfo f(file);
+                QString own = f.owner();
+                if (f.permission(QFile::WriteUser) && own != "root"){
+                    file.remove();
+                }else{
+                    QMessageBox messageBox;
+                    messageBox.setText("You can`t delete this file");
+                    messageBox.setFixedSize(500,200);
+                    messageBox.exec();
+                }
                 this->setCursor(QCursor(Qt::ArrowCursor));
             }
         }
@@ -174,9 +212,19 @@ void MainWindow::rename_file(){
         name.append(".");
     }
     name.append(info.completeSuffix());
-    QString text = QInputDialog::getText(this, tr(""),
-                                         tr("New name:"), QLineEdit::Normal,
-                                         name, &result);
+    QString text;
+    if (info.permission(QFile::WriteUser)){
+        text = QInputDialog::getText(this, tr(""),
+                                             tr("New name:"), QLineEdit::Normal,
+                                             name, &result);
+    } else
+    {
+        QMessageBox msg;
+        msg.setText("You can't rename this");
+        msg.setFixedSize(500,200);
+        msg.exec();
+    }
+
     if(result){
         if(info.isDir()){
             QDir dir(info.absoluteFilePath());
