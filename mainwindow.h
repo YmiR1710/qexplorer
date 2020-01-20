@@ -49,6 +49,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QFileSystemModel *model;
+    QFileSystemModel *model_2;
     qint64 dirSize(QString dirPath);
     void copyPath(QString src, QString dst);
 };

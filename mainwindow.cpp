@@ -26,15 +26,20 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     model = new QFileSystemModel(this);
+    model_2 = new QFileSystemModel(this);
     model->setFilter(QDir::QDir::AllEntries);
     model->setRootPath(mPath);
+    model_2->setFilter(QDir::QDir::AllEntries);
+    model_2->setRootPath(mPath);
     ui->lineEdit_1->setText(mPath);
     ui->lineEdit_2->setText(mPath);
     ui->listView_1->setModel(model);
-    ui->listView_2->setModel(model);
+    ui->listView_2->setModel(model_2);
+
     QModelIndex idx = model->index(model->rootPath());
+    QModelIndex idx_2 = model_2->index(model_2->rootPath());
     ui->listView_1->setRootIndex(idx);
-    ui->listView_2->setRootIndex(idx);
+    ui->listView_2->setRootIndex(idx_2);
     ui->search_1->setVisible(false);
     ui->search_2->setVisible(false);
     connect(ui->listView_1, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(on_listView_1_doubleClicked(QModelIndex)));
@@ -78,19 +83,30 @@ void MainWindow::on_listView_1_doubleClicked(const QModelIndex &index)
     }
     if(listView == ui->listView_1){
         ui->lineEdit_1->setText(fileInfo.absoluteFilePath());
+        if (fileInfo.fileName() == ".."){
+            QDir dir = fileInfo.dir();
+            dir.cdUp();
+            listView->setRootIndex(model->index(dir.absolutePath()));
+        }else if (fileInfo.fileName() == "."){
+            listView->setRootIndex(model->index(""));
+        }
+        else if (fileInfo.isDir()){
+            listView->setRootIndex(index);
+        }
     }else{
         ui->lineEdit_2->setText(fileInfo.absoluteFilePath());
+        if (fileInfo.fileName() == ".."){
+            QDir dir = fileInfo.dir();
+            dir.cdUp();
+            listView->setRootIndex(model_2->index(dir.absolutePath()));
+        }else if (fileInfo.fileName() == "."){
+            listView->setRootIndex(model_2->index(""));
+        }
+        else if (fileInfo.isDir()){
+            listView->setRootIndex(index);
+        }
     }
-    if (fileInfo.fileName() == ".."){
-        QDir dir = fileInfo.dir();
-        dir.cdUp();
-        listView->setRootIndex(model->index(dir.absolutePath()));
-    }else if (fileInfo.fileName() == "."){
-        listView->setRootIndex(model->index(""));
-    }
-    else if (fileInfo.isDir()){
-        listView->setRootIndex(index);
-    }
+
     this->setCursor(QCursor(Qt::ArrowCursor));
 }
 
@@ -528,7 +544,13 @@ void MainWindow::lineEditEnter(){
     QLineEdit* line = (QLineEdit*)sender();
     QString path = line->text();
     QDir dir(path);
-    QModelIndex idx = model->index(path);
+    QModelIndex idx;
+    if(line == ui->search_1){
+        idx = model->index(path);
+    }
+    else{
+        idx = model_2->index(path);
+    }
     if(dir.exists()){
         if(line == ui->lineEdit_1){
             ui->listView_1->setRootIndex(idx);
@@ -549,18 +571,14 @@ void MainWindow::searchEnter(){
     filters << request;
     filters << ".";
     filters << "..";
-//    QFileSystemModel *filtered_model = new QFileSystemModel(this);
-//    filtered_model->setRootPath(mPath);
-//    filtered_model->setNameFilters(filters);
-//    filtered_model->setNameFilterDisables(false);
-    model->setNameFilters(filters);
-    model->setNameFilterDisables(false);
     if(line == ui->search_1){
-//        ui->listView_1->setModel(filtered_model);
+        model->setNameFilters(filters);
+        model->setNameFilterDisables(false);
         ui->listView_1->setRootIndex(model->index(ui->lineEdit_1->text()));
     } else if(line == ui->search_2){
-//        ui->listView_2->setModel(filtered_model);
-        ui->listView_2->setRootIndex(model->index(ui->lineEdit_2->text()));
+        model_2->setNameFilters(filters);
+        model_2->setNameFilterDisables(false);
+        ui->listView_2->setRootIndex(model_2->index(ui->lineEdit_2->text()));
     }
 }
 
@@ -569,6 +587,7 @@ void MainWindow::close_search(){
     ui->search_2->setVisible(false);
     QStringList filters;
     model->setNameFilters(filters);
+    model_2->setNameFilters(filters);
 }
 
 void MainWindow::unarhive(){
