@@ -322,8 +322,10 @@ void MainWindow::paste_file(){
                 QString new_path = chosen_info.absolutePath();
                 new_path.append("/");
                 new_path.append(copy_info.baseName());
-                new_path.append(".");
-                new_path.append(copy_info.completeSuffix());
+                if(copy_info.completeSuffix().size() != 0){
+                    new_path.append(".");
+                    new_path.append(copy_info.completeSuffix());
+                }
                 int counter = 1;
                 while(!file_to_copy.copy(new_path)){
                     new_path = chosen_info.absolutePath();
