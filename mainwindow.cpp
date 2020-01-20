@@ -4,7 +4,7 @@
 
 
 #if defined(_WIN32)
-QString mPath = "C:\";
+QString mPath = "C:\\";
 #endif
 #if defined(unix) || defined(__unix__) || defined(__unix)
 QString mPath = "/";
