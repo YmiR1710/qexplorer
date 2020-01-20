@@ -331,8 +331,10 @@ void MainWindow::paste_file(){
                     new_path = chosen_info.absolutePath();
                     new_path.append("/");
                     QString text = copy_info.baseName();
-                    text.append(".");
-                    text.append(copy_info.completeSuffix());
+                    if(copy_info.completeSuffix().size() != 0){
+                        text.append(".");
+                        text.append(copy_info.completeSuffix());
+                    }
                     QStringList text_list = text.split('.');
                     text_list[0].append("(");
                     text_list[0].append(QString::number(counter));
