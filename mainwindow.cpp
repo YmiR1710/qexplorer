@@ -77,35 +77,34 @@ void MainWindow::on_listView_1_doubleClicked(const QModelIndex &index)
     this->setCursor(QCursor(Qt::WaitCursor));
     QListView* listView = (QListView*)sender();
     QFileInfo fileInfo = model->fileInfo(index);
+    QFileSystemModel *m;
     if (fileInfo.isFile()) {
-        QDesktopServices::openUrl(QUrl(fileInfo.absoluteFilePath().prepend("file:///")));
+        if (fileInfo.permission(QFile::ReadUser)){
+            QDesktopServices::openUrl(QUrl(fileInfo.absoluteFilePath().prepend("file:///")));
+        } else {
+            QMessageBox msg;
+            msg.setText("No permissions to open this file");
+            msg.exec();
+        }
         this->setCursor(QCursor(Qt::ArrowCursor));
         return;
     }
     if(listView == ui->listView_1){
         ui->lineEdit_1->setText(fileInfo.absoluteFilePath());
-        if (fileInfo.fileName() == ".."){
-            QDir dir = fileInfo.dir();
-            dir.cdUp();
-            listView->setRootIndex(model->index(dir.absolutePath()));
-        }else if (fileInfo.fileName() == "."){
-            listView->setRootIndex(model->index(""));
-        }
-        else if (fileInfo.isDir()){
-            listView->setRootIndex(index);
-        }
+        m = model;
     }else{
         ui->lineEdit_2->setText(fileInfo.absoluteFilePath());
-        if (fileInfo.fileName() == ".."){
-            QDir dir = fileInfo.dir();
-            dir.cdUp();
-            listView->setRootIndex(model_2->index(dir.absolutePath()));
-        }else if (fileInfo.fileName() == "."){
-            listView->setRootIndex(model_2->index(""));
-        }
-        else if (fileInfo.isDir()){
-            listView->setRootIndex(index);
-        }
+        m = model_2;
+    }
+    if (fileInfo.fileName() == ".."){
+        QDir dir = fileInfo.dir();
+        dir.cdUp();
+        listView->setRootIndex(m->index(dir.absolutePath()));
+    }else if (fileInfo.fileName() == "."){
+        listView->setRootIndex(m->index(""));
+    }
+    else if (fileInfo.isDir()){
+        listView->setRootIndex(index);
     }
 
     this->setCursor(QCursor(Qt::ArrowCursor));
@@ -128,62 +127,14 @@ void MainWindow::show_hide_search_2(){
 }
 
 void MainWindow::delete_file(){
-    if(chosenFiles.size()>=2){
-        QMessageBox::StandardButton reply;
-        QString question = "Are you sure you want to delete " + QString::number(chosenFiles.size()) +
-                " files?";
-        reply = QMessageBox::question(this, "", question,
-                                      QMessageBox::Yes|QMessageBox::No);
-        for(auto &c_file: chosenFiles){
-            if(model->fileInfo(c_file).isDir()){
-                QDir dir(model->fileInfo(c_file).absoluteFilePath());
-                if (reply == QMessageBox::Yes) {
-                    this->setCursor(QCursor(Qt::WaitCursor));
-                    QFileInfo f(dir.absolutePath());
-                    QString own = f.owner();
-                    if (f.permission(QFile::WriteUser) && own != "root"){
-                        dir.removeRecursively();
-                    }else{
-                        QMessageBox messageBox;
-                        messageBox.setText("No permission");
-                        messageBox.setFixedSize(500,200);
-                        messageBox.exec();
-                    }
-
-                    this->setCursor(QCursor(Qt::ArrowCursor));
-                }
-            }else{
-                QFile file(model->fileInfo(c_file).absoluteFilePath());
-                if (reply == QMessageBox::Yes) {
-                    this->setCursor(QCursor(Qt::WaitCursor));
-                    QFileInfo f(file);
-                    QString own = f.owner();
-                    if (f.permission(QFile::WriteUser) && own != "root"){
-                        file.remove();
-                    }else{
-                        QMessageBox messageBox;
-                        messageBox.setText("No permission");
-                        messageBox.setFixedSize(500,200);
-                        messageBox.exec();
-                    }
-                    this->setCursor(QCursor(Qt::ArrowCursor));
-                }
-            }
-        }
-    }
-    else{
-        QMessageBox::StandardButton reply;
-        QString question = "Are you sure you want to delete ";
-        question.append(model->fileInfo(chosenFile).baseName());
-        if(!(model->fileInfo(chosenFile).completeSuffix() == "")){
-            question.append(".");
-        }
-        question.append(model->fileInfo(chosenFile).completeSuffix());
-        question.append("?");
-        reply = QMessageBox::question(this, "", question,
-                                      QMessageBox::Yes|QMessageBox::No);
-        if(model->fileInfo(chosenFile).isDir()){
-            QDir dir(model->fileInfo(chosenFile).absoluteFilePath());
+    QMessageBox::StandardButton reply;
+    QString question = "Are you sure you want to delete " + QString::number(chosenFiles.size()) +
+            " files?";
+    reply = QMessageBox::question(this, "", question,
+                                  QMessageBox::Yes|QMessageBox::No);
+    for(auto &c_file: chosenFiles){
+        if(model->fileInfo(c_file).isDir()){
+            QDir dir(model->fileInfo(c_file).absoluteFilePath());
             if (reply == QMessageBox::Yes) {
                 this->setCursor(QCursor(Qt::WaitCursor));
                 QFileInfo f(dir.absolutePath());
@@ -196,10 +147,11 @@ void MainWindow::delete_file(){
                     messageBox.setFixedSize(500,200);
                     messageBox.exec();
                 }
+
                 this->setCursor(QCursor(Qt::ArrowCursor));
             }
         }else{
-            QFile file(model->fileInfo(chosenFile).absoluteFilePath());
+            QFile file(model->fileInfo(c_file).absoluteFilePath());
             if (reply == QMessageBox::Yes) {
                 this->setCursor(QCursor(Qt::WaitCursor));
                 QFileInfo f(file);
@@ -221,7 +173,7 @@ void MainWindow::delete_file(){
 
 void MainWindow::rename_file(){
     int counter = 1;
-    bool result;
+    bool result = false;
     QFileInfo info = model->fileInfo(chosenFile);
     QString name = info.baseName();
     if(!(info.completeSuffix() == "")){
@@ -233,8 +185,7 @@ void MainWindow::rename_file(){
         text = QInputDialog::getText(this, tr(""),
                                              tr("New name:"), QLineEdit::Normal,
                                              name, &result);
-    } else
-    {
+    } else {
         QMessageBox msg;
         msg.setText("No permission");
         msg.setFixedSize(500,200);
@@ -660,6 +611,12 @@ void MainWindow::unarhive(){
 void MainWindow::open_file(){
     this->setCursor(QCursor(Qt::WaitCursor));
     QFileInfo fileInfo = model->fileInfo(chosenFile);
-    QDesktopServices::openUrl(QUrl(fileInfo.absoluteFilePath().prepend("file:///")));
+    if (fileInfo.permission(QFile::ReadUser)){
+        QDesktopServices::openUrl(QUrl(fileInfo.absoluteFilePath().prepend("file:///")));
+    } else {
+        QMessageBox msg;
+        msg.setText("You can't open this file");
+        msg.exec();
+    }
     this->setCursor(QCursor(Qt::ArrowCursor));
 }
