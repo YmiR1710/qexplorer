@@ -10,7 +10,7 @@ git clone https://github.com/Oleh93/qexplorer
 
 #### Linux/MaxOS
 ```
-cmake -G "Unix Makefiles"
+cmake -G "Unix Makefiles" .
 make
 ```
 #### Windows
