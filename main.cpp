@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <QDesktopWidget>
+#include <archiver.h>
 
 int main(int argc, char *argv[])
 {

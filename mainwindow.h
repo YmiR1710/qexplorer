@@ -44,6 +44,7 @@ private slots:
     void cut_file();
     void create_file();
     void create_folder();
+    void compress_files ();
 
 
 private:
