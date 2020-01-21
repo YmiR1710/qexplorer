@@ -1,4 +1,4 @@
-# qexplorer
+# qexplorer - crossplatform GUI file manager
 
 ### Prerequisites
 
