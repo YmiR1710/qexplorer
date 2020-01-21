@@ -145,7 +145,7 @@ void MainWindow::delete_file(){
                         dir.removeRecursively();
                     }else{
                         QMessageBox messageBox;
-                        messageBox.setText("You can`t delete this folder");
+                        messageBox.setText("No permission");
                         messageBox.setFixedSize(500,200);
                         messageBox.exec();
                     }
@@ -162,7 +162,7 @@ void MainWindow::delete_file(){
                         file.remove();
                     }else{
                         QMessageBox messageBox;
-                        messageBox.setText("You can`t delete this file");
+                        messageBox.setText("No permission");
                         messageBox.setFixedSize(500,200);
                         messageBox.exec();
                     }
@@ -192,7 +192,7 @@ void MainWindow::delete_file(){
                     dir.removeRecursively();
                 }else{
                     QMessageBox messageBox;
-                    messageBox.setText("You can`t delete this folder");
+                    messageBox.setText("No permission");
                     messageBox.setFixedSize(500,200);
                     messageBox.exec();
                 }
@@ -208,7 +208,7 @@ void MainWindow::delete_file(){
                     file.remove();
                 }else{
                     QMessageBox messageBox;
-                    messageBox.setText("You can`t delete this file");
+                    messageBox.setText("No permission");
                     messageBox.setFixedSize(500,200);
                     messageBox.exec();
                 }
@@ -236,7 +236,7 @@ void MainWindow::rename_file(){
     } else
     {
         QMessageBox msg;
-        msg.setText("You can't rename this");
+        msg.setText("No permission");
         msg.setFixedSize(500,200);
         msg.exec();
     }
